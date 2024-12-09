@@ -2,3 +2,4 @@
 .env
 bot.log
 .DS_Store
+scrap.py
