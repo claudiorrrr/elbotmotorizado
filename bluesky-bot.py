@@ -34,14 +34,12 @@ def get_random_line(songs):
         # Get a random song
         song = random.choice(songs)
 
-        # Split lyrics into lines and filter out empty lines
-        lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
-
-        # Get a random line
-        return random.choice(lines)
+        # Get a random line directly from the array
+        return random.choice(song['lyrics'])
     except Exception as e:
         logging.error(f"Error getting random line: {e}")
         return None
+
 
 def post_to_bluesky(text, client):
     """Post to Bluesky"""
