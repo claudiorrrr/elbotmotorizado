@@ -22,7 +22,7 @@ logging.basicConfig(
 def load_lyrics():
     """Load lyrics from JSON file"""
     try:
-        with open('el_mato_lyrics.json', 'r', encoding='utf-8') as f:
+        with open('el_mato_lyrics_formatted.json', 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         logging.error(f"Error loading lyrics file: {e}")
@@ -34,8 +34,15 @@ def get_random_line(songs):
         # Get a random song
         song = random.choice(songs)
 
-        # Get a random line directly from the array
-        return random.choice(song['lyrics'])
+        # Ensure lyrics is a list
+        if isinstance(song['lyrics'], list):
+            # Get a random line from the lyrics list
+            line = random.choice(song['lyrics'])
+            return line.strip()  # Remove any extra whitespace
+        else:
+            logging.error("Song lyrics is not in the expected list format")
+            return None
+
     except Exception as e:
         logging.error(f"Error getting random line: {e}")
         return None
