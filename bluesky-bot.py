@@ -60,8 +60,13 @@ def get_random_line(songs, posted_lines, max_attempts=100):
             # Get a random song
             song = random.choice(songs)
 
-            # Split lyrics into lines and filter out empty lines
-            lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
+            # Handle both string and list format for lyrics
+            if isinstance(song['lyrics'], list):
+                # If lyrics is already a list
+                lines = [line.strip() for line in song['lyrics'] if line.strip()]
+            else:
+                # If lyrics is a string (our format)
+                lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
 
             # Get a random line
             line = random.choice(lines)
@@ -84,7 +89,10 @@ def get_random_line(songs, posted_lines, max_attempts=100):
     
     try:
         song = random.choice(songs)
-        lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
+        if isinstance(song['lyrics'], list):
+            lines = [line.strip() for line in song['lyrics'] if line.strip()]
+        else:
+            lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
         line = random.choice(lines)
         normalized = normalize_line(line)
         return line, normalized
