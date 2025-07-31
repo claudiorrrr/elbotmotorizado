@@ -28,20 +28,69 @@ def load_lyrics():
         logging.error(f"Error loading lyrics file: {e}")
         return None
 
-def get_random_line(songs):
-    """Select a random song and then a random line from its lyrics"""
+def load_posted_lines():
+    """Load previously posted lines from file"""
     try:
-        # Get a random song
-        song = random.choice(songs)
-
-        # Split lyrics into lines and filter out empty lines
-        lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
-
-        # Get a random line
-        return random.choice(lines)
+        with open('posted_lines.json', 'r', encoding='utf-8') as f:
+            return set(json.load(f))
+    except FileNotFoundError:
+        return set()
     except Exception as e:
-        logging.error(f"Error getting random line: {e}")
-        return None
+        logging.error(f"Error loading posted lines: {e}")
+        return set()
+
+def save_posted_lines(posted_lines):
+    """Save posted lines to file"""
+    try:
+        with open('posted_lines.json', 'w', encoding='utf-8') as f:
+            json.dump(list(posted_lines), f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Error saving posted lines: {e}")
+
+def normalize_line(line):
+    """Normalize line for comparison"""
+    return ' '.join(line.strip().split()).lower()
+
+def get_random_line(songs, posted_lines, max_attempts=100):
+    """Select a random song and then a random line that hasn't been posted"""
+    attempts = 0
+    
+    while attempts < max_attempts:
+        try:
+            # Get a random song
+            song = random.choice(songs)
+
+            # Split lyrics into lines and filter out empty lines
+            lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
+
+            # Get a random line
+            line = random.choice(lines)
+            
+            # Check if we've posted this line before
+            normalized = normalize_line(line)
+            if normalized not in posted_lines:
+                return line, normalized
+            
+            attempts += 1
+            
+        except Exception as e:
+            logging.error(f"Error getting random line: {e}")
+            attempts += 1
+    
+    # If no unique line found, clear history and try again
+    logging.warning("No unique lines found, clearing post history")
+    posted_lines.clear()
+    save_posted_lines(posted_lines)
+    
+    try:
+        song = random.choice(songs)
+        lines = [line.strip() for line in song['lyrics'].split('\n') if line.strip()]
+        line = random.choice(lines)
+        normalized = normalize_line(line)
+        return line, normalized
+    except Exception as e:
+        logging.error(f"Error getting fallback line: {e}")
+        return None, None
 
 def post_to_bluesky(text, client):
     """Post to Bluesky"""
@@ -66,15 +115,26 @@ def main():
         client.login(bluesky_handle, bluesky_password)
         logging.info("Successfully logged into Bluesky")
 
-        # Load songs
+        # Load songs and posted lines
         songs = load_lyrics()
         if not songs:
             raise Exception("Failed to load songs")
+        
+        posted_lines = load_posted_lines()
 
-        # Get and post random line
-        line = get_random_line(songs)
-        if line:
+        # Get unique random line
+        result = get_random_line(songs, posted_lines)
+        if result and result[0]:
+            line, normalized = result
             post_to_bluesky(line, client)
+            
+            # Mark this line as posted
+            posted_lines.add(normalized)
+            save_posted_lines(posted_lines)
+            
+            logging.info(f"Added line to posted history. Total posted: {len(posted_lines)}")
+        else:
+            logging.error("Could not find a line to post")
 
     except Exception as e:
         logging.error(f"Main function error: {e}")
